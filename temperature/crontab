@@ -1,0 +1,1 @@
+0,15,30,45 * * * * /var/temperature/record_temperature.py > /var/temperature/run.log 2>&1
