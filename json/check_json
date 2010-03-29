@@ -1,0 +1,77 @@
+#! /usr/bin/env python
+
+"""
+Nagios plugin to check a value returned from a uri in json format.
+
+Copyright (c) 2009 Peter Kropf. All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+Example:
+
+Compare the "hostname" field in the json structure returned from
+http://store.thecrucible.org/hostname.py against a known value.
+
+    ./check_json hostname buenosaires http://store.thecrucible.org/hostname.py
+"""
+
+
+import urllib2
+import simplejson
+import sys
+from optparse import OptionParser
+
+
+prefix = 'JSON'
+
+class nagios:
+    ok       = (0, 'OK')
+    warning  = (1, 'WARNING')
+    critical = (2, 'CRITICAL')
+    unknown  = (3, 'UNKNOWN')
+
+
+def exit(status, message):
+    print prefix + ' ' + status[1] + ' - ' + message
+    sys.exit(status[0])
+
+
+parser = OptionParser(usage='usage: %prog field_name expected_value uri')
+options, args = parser.parse_args()
+
+
+if len(sys.argv) < 3:
+    exit(nagios.unknown, 'missing command line arguments')
+
+field = args[0]
+value = args[1]
+uri = args[2]
+
+try:
+    j = simplejson.load(urllib2.urlopen(uri))
+except urllib2.HTTPError, ex:
+    exit(nagios.unknown, 'invalid uri')
+
+if field not in j:
+    exit(nagios.unknown, 'field: ' + field + ' not present')
+
+if j[field] != value:
+    exit(nagios.critical, j[field] + ' != ' + value)
+
+exit(nagios.ok, j[field] + ' == ' + value)
