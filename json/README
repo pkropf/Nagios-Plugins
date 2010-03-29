@@ -1,0 +1,8 @@
+The check_json plugin will pull json data from a web server and
+evaluate it to determine how services on the remote system are
+working. 
+
+As an example, hostname.py is a simple CGI program that returns the
+host name of the system on which web server is running as a json data
+structure. It can be used by check_json to ensure that the host name
+of the web server doesn't change.
