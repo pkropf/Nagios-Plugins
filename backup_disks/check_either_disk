@@ -1,0 +1,80 @@
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+Nagios plugin to check a the free disk space on one of two drives. 
+
+Copyright (c) 2011 Peter Kropf. All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+I have a client who uses SuperDuper on an OS X server to create backups of
+their primary drives. The backup drives are swapped out every week for off-
+site backups. The volumes are names homebua and homebub, vulcanbua and 
+vulcanbub, intranetbua and intranetbub. One week the bua drives are in place
+and used daily to create nightly snapshows. The next week the bub drives are
+used.
+
+This plugin looks for one of the two specified volumes and checks the 
+available free space. If neither volume is found, return an error. If not
+enough space is available, return an error. Otherwise, return ok. 
+
+Example:
+
+    ./check_either_disk /Volumes/HomeBUA /Volumes/HomeBUB -w limit -c limit
+"""
+
+
+import sys
+import os
+from optparse import OptionParser
+
+
+prefix = 'either_disk'
+
+class nagios:
+    ok       = (0, 'OK')
+    warning  = (1, 'WARNING')
+    critical = (2, 'CRITICAL')
+    unknown  = (3, 'UNKNOWN')
+
+
+def exit(status, message):
+    print prefix + ' ' + status[1] + ' - ' + message
+    sys.exit(status[0])
+
+
+if len(sys.argv) < 2:
+    exit(nagios.unknown, 'missing command line arguments')
+
+disk1 = sys.argv[1]
+disk2 = sys.argv[2]
+opts  = ['check_disk'] + sys.argv[3:]
+disk_check = os.path.join(os.path.abspath(os.path.dirname(sys.argv[0])), 'check_disk')
+
+if os.path.ismount(disk1):
+    opts.insert(1, disk1)
+    os.execl(disk_check, *opts)
+
+elif os.path.ismount(disk2):
+    opts.insert(1, disk2)
+    os.execl(disk_check, *opts)
+
+else:
+    exit(nagios.unknown, 'missing disks: %s, %s' % (disk1, disk2))
