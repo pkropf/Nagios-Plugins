@@ -1,0 +1,91 @@
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+Nagios plugin to check if the contents of a directory has been changed.
+
+Copyright (c) 2014 Peter Kropf. All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+Sometimes you need to know when a mercurial directory tree has changes
+that haven't been committed. This plugin will check the status and
+return a warning if there are any changes that haven't been committed.
+
+Example:
+
+    ./dirchanged --check /path/to/directory hash
+    ./dirchanged --gen /path/to/directory
+"""
+
+
+import sys
+import os
+import argparse
+import popen2
+import hashlib
+
+
+class nagios:
+    ok       = (0, 'OK')
+    warning  = (1, 'WARNING')
+    critical = (2, 'CRITICAL')
+    unknown  = (3, 'UNKNOWN')
+
+
+parser = argparse.ArgumentParser(
+    description = 'Check if a directory has changed.',
+    prog = 'dirchanged')
+parser.add_argument('--check', action='append', nargs=2, help='print the hash for the directory')
+parser.add_argument('--gen',   action='append', nargs=1, help='print the hash for the directory')
+
+args = parser.parse_args()
+
+def exit(status, message):
+    print parser.prog + ' ' + status[1] + ' - ' + message
+    sys.exit(status[0])
+
+
+if len(sys.argv) < 2:
+    exit(nagios.unknown, 'missing command line arguments')
+
+if args.check:
+    d = args.check[0][0]
+
+else:
+    d = args.gen[0][0]
+
+m = hashlib.sha256()
+
+for root, dirs, files in os.walk(d):
+    for f in files:
+        m.update(f)
+        m.update(open(f, 'r').read())
+
+h = m.hexdigest()
+
+if args.gen:
+    print h
+
+else:
+    if h == args.check[0][1]:
+        exit(nagios.ok, 'directory has not changed: %s' % d)
+
+    else:
+        exit(nagios.critical, 'directory has changed: %s' % d)
