@@ -1,0 +1,4 @@
+cmd_md5 is used to determine if the md5 output of a command matches the expected value.
+
+$ cmd_md5 /path/to/cmd 489180a15f2453f03352dfac0fb6e807
+cmd_md5 OK - command ok: /path/to/cmd
