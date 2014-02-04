@@ -76,7 +76,7 @@ m = hashlib.sha256()
 for root, dirs, files in os.walk(d):
     for f in files:
         m.update(f)
-        m.update(open(f, 'r').read())
+        m.update(open(os.path.join(root, f), 'r').read())
 
 h = m.hexdigest()
 
