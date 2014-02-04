@@ -1,0 +1,11 @@
+direchanged is used to determine if the contents of a directory has changed.
+
+use the --gen parameter to generate the hash used in checking:
+
+$ dirchanged --gen test
+e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+
+use the --check parameter to monitor the directory:
+
+$ dirchanged --check test e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+dirchanged OK - directory has not changed: test
