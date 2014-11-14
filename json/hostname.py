@@ -28,7 +28,7 @@ THE SOFTWARE.
 
 import cgi
 import popen2
-import simplejson as json
+import json
 
 field = cgi.FieldStorage()
 print "Content-Type: application/json\n\n"
