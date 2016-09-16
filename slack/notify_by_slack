@@ -1,0 +1,33 @@
+#!/bin/sh
+
+set -e
+
+PATH=/bin:/sbin:/usr/sbin:/usr/bin
+USAGE="$0 channel username message"
+
+if [ -z "$1" ] ; then
+    echo "No slack channel specified on command line"
+    echo "Usage: $USAGE"
+    exit 1
+fi
+
+if [ -z "$2" ] ; then
+    echo "No slack username specified on command line"
+    echo "Usage: $USAGE"
+    exit 1
+fi
+
+if [ -z "$3" ] ; then
+    echo "No message specified on command line"
+    echo "Usage: $USAGE"
+    exit 1
+fi
+
+channel=$1
+username=$2
+message=$(echo $3 | sed 's/"/\"/g' | sed "s/'/\'/g" )
+URL="YOUR SLACK WEBHOOK URL GOES HERE"
+
+json="{\"channel\": \"$channel\", \"username\":\"$username\", \"icon_emoji\":\"ghost\", \"attachments\":[{\"color\":\"danger\" , \"text\": \"$message\"}]}"
+
+curl -s -d "payload=$json" "$URL"
