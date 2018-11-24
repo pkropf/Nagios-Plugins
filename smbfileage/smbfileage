@@ -1,0 +1,115 @@
+#! /usr/bin/env python2
+# -*- coding: utf-8 -*-
+
+"""
+Nagios plugin to check the temperature in the server room.
+
+Copyright (c) 2018 Peter Kropf. All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+
+Example:
+
+Check the age of a file or directory on a Windows network share.
+
+    ./smbfileage -w 86400 -c 259200 --user=USERNAME --password='PASSWORD' --domain DOMAIN host 'C$' /path/to/file
+"""
+
+
+import argparse
+from smb.SMBConnection import SMBConnection
+from smb import smb_structs
+import socket
+from datetime import datetime, timedelta
+import sys
+
+
+prefix = 'smbfileage'
+
+
+class nagios:
+    ok       = (0, 'OK')
+    warning  = (1, 'WARNING')
+    critical = (2, 'CRITICAL')
+    unknown  = (3, 'UNKNOWN')
+
+
+def exit(status, message):
+    print prefix + ' ' + status[1] + ' - ' + message
+    sys.exit(status[0])
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--user',     help='username to be used for the connection')
+parser.add_argument('--password', help='password to be used for the connection')
+parser.add_argument('--domain',   help='windows domain to be used for the connection')
+parser.add_argument('--hostname', help='name of the local computer to use for the connection', default=socket.gethostname())
+parser.add_argument('--debug',    help='allow for exceptions to be raised when access remote shares', action="store_true")
+parser.add_argument('-w',         help='number of seconds of age for a warning state',  type=int, dest='warning')
+parser.add_argument('-c',         help='number of seconds of age for a critical state', type=int, dest='critical')
+parser.add_argument('server',     help='server which is to be tested')
+parser.add_argument('share',      help='share to test')
+parser.add_argument('path',       help='share path of the file / directory to be tested')
+#parser.print_help()
+
+args = parser.parse_args()
+#print args
+
+conn = SMBConnection(args.user,
+                     args.password,
+                     args.hostname,
+                     args.server,
+                     domain=args.domain,
+                     use_ntlm_v2=True,
+                     is_direct_tcp=True)
+
+conn.connect(args.server, 445)
+
+shares = conn.listShares()
+
+#print [s.name for s in shares]
+
+if args.share not in shares:
+    pass
+
+try:
+    sharedfile = conn.getAttributes(args.share, args.path)
+except smb_structs.OperationFailure:
+    if not args.debug:
+        exit(nagios.critical, 'unable to access file')
+
+    else:
+        raise
+
+conn.close()
+
+
+last_write_time = datetime.fromtimestamp(sharedfile.last_write_time)
+now = datetime.now()
+age = now - last_write_time
+
+if args.critical:
+    if age > timedelta(seconds=args.critical):
+        exit(nagios.critical, 'file too old: ' + str(age))
+
+if args.warning:
+    if age > timedelta(seconds=args.warning):
+        exit(nagios.warning, 'file getting old: ' + str(age))
+
+exit(nagios.ok, str(age))
